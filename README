@@ -1,0 +1,36 @@
+* What is this?
+
+sf2xrni is a Renoise tool for creating XRNI (instrument) files from a
+SoundFont sf2 file.
+
+* Usage
+
+	$ (mono) sf2xrni(.exe) sf2-files
+
+	For mono, you'll need the latest build from trunk (I made a fix
+	which is only in trunk so far).
+
+	A directory is created to contain a set of XRNI files.
+
+* Conversion Basics
+
+	A soundfont file contains more than one Presets.
+	A Preset is mapped to an XRN Instrument.
+	A SF2 Preset contains more than one Instruments.
+	An Instrument contains more than one Zones, and each Zone contains
+	a SampleHeader, which is a set of information to retrieve raw sample.
+
+* Dependencies
+
+sf2xrni uses a couple of libraries:
+
+- NRenoiseTools, to write XRNI files.
+  http://www.codeplex.com/nrenoisetools
+- NAudio, which contains SoundFont2 file format support.
+  http://naudio.codeplex.com/
+- ICSharpCode.SharpZipLib. It is just NRenoiseTools dependency
+  http://www.icsharpcode.net/OpenSource/SharpZipLib/Default.aspx
+
+The prebuilt assemblies are in the repo.
+
+
