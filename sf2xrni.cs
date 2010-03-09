@@ -27,6 +27,12 @@ namespace Commons.Music.Sf2Xrni
 			return g != null ? g.UInt16Amount : (ushort) 0;
 		}
 
+		public static int SampleModes (this Zone zone)
+		{
+			var g = SelectByGenerator (zone, GeneratorEnum.SampleModes);
+			return g != null ? g.UInt16Amount : (ushort) 0;
+		}
+
 		public static SampleHeader SampleHeader (this Zone zone)
 		{
 			var g = SelectByGenerator (zone, GeneratorEnum.SampleID);
@@ -94,6 +100,7 @@ namespace Commons.Music.Sf2Xrni
 		{
 			var xl = new List<XSample> ();
 			var ml = new List<SampleMap> ();
+			var il = new List<int> ();
 			foreach (var pzone in preset.Zones) { // perc. bank likely has more than one instrument here.
 				var i = pzone.Instrument ();
 				var r = pzone.KeyRange (); // FIXME: where should I use it?
@@ -107,7 +114,7 @@ namespace Commons.Music.Sf2Xrni
 					if (sh == null)
 						continue; // FIXME: is it possible?
 					// FIXME: sample data must become monoral (panpot neutral)
-					var xs = ConvertSample (sampleCount++, sh, sf2.SampleData);
+					var xs = ConvertSample (sampleCount++, sh, sf2.SampleData, izone);
 					xs.Name = sh.SampleName;
 					ml.Add (new SampleMap (ir, xs));
 				}
@@ -115,9 +122,17 @@ namespace Commons.Music.Sf2Xrni
 
 			ml.Sort ((m1, m2) => m1.LowRange - m2.LowRange);
 
-			foreach (var m in ml)
+			int prev = -1;
+			foreach (var m in ml) {
+				if (m.LowRange == prev)
+					continue; // skip ones with equivalent key to the previous one. Likely, right and left, or high volume vs. low volume.
+				prev = m.LowRange;
+				il.Add (m.LowRange);
 				xl.Add (m.XSample);
+			}
 
+			// FIXME: enable this when I sorted out why it causes renoise crash
+			// xrni.SplitMap = il.ToArray ();
 			xrni.Samples = xl.ToArray ();
 		}
 
@@ -151,17 +166,19 @@ namespace Commons.Music.Sf2Xrni
 			xinstruments.Add (xrni);
 		}
 
-		XSample ConvertSample (int count, SSampleHeader sh, byte [] sample)
+		XSample ConvertSample (int count, SSampleHeader sh, byte [] sample, Zone izone)
 		{
 			// Indices in sf2 are numbers of samples, not byte length. So double them.
 			var xs = new XSample ();
 			xs.LoopStart = 2 * (sh.StartLoop - sh.Start);
 			xs.LoopEnd = 2 * (sh.EndLoop - sh.End);
+			int sampleModes = izone.SampleModes ();
+			xs.LoopMode = sampleModes == 0 ? SampleLoopMode.Off : SampleLoopMode.Forward;
 			xs.Name = String.Format ("Sample{0:D02} ({1})", count, sh.SampleName);
-Console.WriteLine ("{0} ({1}/{2}/{3}/{4})", xs.Name, sh.Start, sh.StartLoop, sh.EndLoop, sh.End);
+//Console.WriteLine ("{0} ({1}/{2}/{3}/{4}) {5}:{6}:{7}:{8}", xs.Name, sh.Start, sh.StartLoop, sh.EndLoop, sh.End, sh.SampleRate != 0xAC44 ? sh.SampleRate.ToString () : "", sh.OriginalPitch != 60 ? sh.OriginalPitch.ToString () : "", sh.PitchCorrection != 0 ? sh.PitchCorrection.ToString () : "", sampleModes);
 			xs.FileName = xs.Name + ".wav";
 			var ms = new MemoryStream ();
-			var wfw = new WaveFileWriter (ms, new WaveFormat ((int) sh.SampleRate, 1));
+			var wfw = new WaveFileWriter (ms, new WaveFormat ((int) sh.SampleRate, 16, 1));
 			wfw.WriteData (sample, 2 * (int) sh.Start, 2 * (int) (sh.End - sh.Start));
 			wfw.Close ();
 			xs.Buffer = ms.ToArray ();
