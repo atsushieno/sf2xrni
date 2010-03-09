@@ -131,8 +131,13 @@ namespace Commons.Music.Sf2Xrni
 				xl.Add (m.XSample);
 			}
 
-			// FIXME: enable this when I sorted out why it causes renoise crash
-			// xrni.SplitMap = il.ToArray ();
+			xrni.SplitMap = new int [128];
+			int idx = -1;
+			for (int i = 0; i < 128; i++) {
+				if (idx + 1 < ml.Count && ml [idx + 1].LowRange >= i)
+					idx++;
+				xrni.SplitMap [i] = idx;
+			}
 			xrni.Samples = xl.ToArray ();
 		}
 
