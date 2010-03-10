@@ -27,6 +27,12 @@ namespace Commons.Music.Sf2Xrni
 			return g != null ? g.UInt16Amount : (ushort) 0;
 		}
 
+		public static byte OverridingRootKey (this Zone zone)
+		{
+			var g = SelectByGenerator (zone, GeneratorEnum.OverridingRootKey);
+			return g != null ? g.LowByteAmount : (byte) 0;
+		}
+
 		public static int SampleModes (this Zone zone)
 		{
 			var g = SelectByGenerator (zone, GeneratorEnum.SampleModes);
@@ -134,6 +140,7 @@ namespace Commons.Music.Sf2Xrni
 			xrni.SplitMap = new int [128];
 			int idx = -1;
 			for (int i = 0; i < 128; i++) {
+				// It is somewhat buggy, includes wrong values for low key area. But replacing it with "while" brings another bug. And using HighRange <= i also gives wrong value too.
 				if (idx + 1 < ml.Count && ml [idx + 1].LowRange >= i)
 					idx++;
 				xrni.SplitMap [i] = idx;
@@ -180,6 +187,9 @@ namespace Commons.Music.Sf2Xrni
 			int sampleModes = izone.SampleModes ();
 			xs.LoopMode = sampleModes == 0 ? SampleLoopMode.Off : SampleLoopMode.Forward;
 			xs.Name = String.Format ("Sample{0:D02} ({1})", count, sh.SampleName);
+			xs.BaseNote = (sbyte) izone.OverridingRootKey ();
+			if (xs.BaseNote == 0)
+				xs.BaseNote = (sbyte) sh.OriginalPitch;
 //Console.WriteLine ("{0} ({1}/{2}/{3}/{4}) {5}:{6}:{7}:{8}", xs.Name, sh.Start, sh.StartLoop, sh.EndLoop, sh.End, sh.SampleRate != 0xAC44 ? sh.SampleRate.ToString () : "", sh.OriginalPitch != 60 ? sh.OriginalPitch.ToString () : "", sh.PitchCorrection != 0 ? sh.PitchCorrection.ToString () : "", sampleModes);
 			xs.FileName = xs.Name + ".wav";
 			var ms = new MemoryStream ();
