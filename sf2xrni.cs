@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using NRenoiseTools;
 using NAudio.SoundFont;
@@ -24,6 +25,12 @@ namespace Commons.Music.Sf2Xrni
 		public static ushort KeyRange (this Zone zone)
 		{
 			var g = SelectByGenerator (zone, GeneratorEnum.KeyRange);
+			return g != null ? g.UInt16Amount : (ushort) 0;
+		}
+
+		public static ushort VelocityRange (this Zone zone)
+		{
+			var g = SelectByGenerator (zone, GeneratorEnum.VelocityRange);
 			return g != null ? g.UInt16Amount : (ushort) 0;
 		}
 
@@ -58,12 +65,24 @@ namespace Commons.Music.Sf2Xrni
 	{
 		public static void Main (string [] args)
 		{
-			foreach (var file in args) {
+			string filter = null;
+			var files = new List<string> ();
+			foreach (var arg in args) {
+				if (arg.StartsWith ("--filter:"))
+					filter = arg.Substring (9);
+				else
+					files.Add (arg);
+			}
+
+			if (filter != null)
+				Console.WriteLine ("Applied filer: " + filter);
+
+			foreach (var file in files) {
 				var path = Path.ChangeExtension (file, "");
 				if (!Directory.Exists (path))
 					Directory.CreateDirectory (path);
 				var sf2xrni = new Sf2XrniStreamingConverter (path);
-				sf2xrni.Import (file);
+				sf2xrni.Import (file, filter);
 			}
 		}
 	}
@@ -89,10 +108,12 @@ namespace Commons.Music.Sf2Xrni
 
 	public class Sf2Xrni
 	{
-		public void Import (string file)
+		public void Import (string file, string filter)
 		{
 			var sf2 = new SoundFont (file);
 			foreach (var preset in sf2.Presets) {
+				if (filter != null && preset.Name.IndexOf (filter) < 0)
+					continue;
 				Console.WriteLine ("Processing " + preset.Name);
 				var xrni = new XInstrument ();
 				xrni.Name = preset.Name;
@@ -109,61 +130,86 @@ namespace Commons.Music.Sf2Xrni
 			var il = new List<int> ();
 			foreach (var pzone in preset.Zones) { // perc. bank likely has more than one instrument here.
 				var i = pzone.Instrument ();
-				var r = pzone.KeyRange (); // FIXME: where should I use it?
+				var kr = pzone.KeyRange (); // FIXME: where should I use it?
 				if (i == null)
 					continue; // FIXME: is it possible?
-				// an Instrument contains a set of zones that contain
+
+				var vr = pzone.VelocityRange ();
+				if (vr != 0 && ((vr & 0xFF00) >> 8) < 127)
+					continue; // use one with the highest velocity.
+
+				// an Instrument contains a set of zones that contain sample headers.
+//Console.WriteLine ("Instrument: " + i.Name);
 				int sampleCount = 0;
 				foreach (var izone in i.Zones) {
-					var ir = izone.KeyRange ();
+					var ikr = izone.KeyRange ();
+					var ivr = izone.VelocityRange ();
 					var sh = izone.SampleHeader ();
 					if (sh == null)
 						continue; // FIXME: is it possible?
+					if (ml.FirstOrDefault (m => m.KeyRange == ikr && m.VelocityRange == ivr && m.SampleHeader == sh) != null)
+						continue; // There already is an overlapping one (not sure why such mapping is allowed, but there are such ones)
+
+					if (ivr != 0 && ((ivr & 0xFF00) >> 8) < 127)
+						continue; // use one with the highest velocity.
+
 					// FIXME: sample data must become monoral (panpot neutral)
 					var xs = ConvertSample (sampleCount++, sh, sf2.SampleData, izone);
 					xs.Name = sh.SampleName;
-					ml.Add (new SampleMap (ir, xs));
+//Console.WriteLine ("Added {0} at {1}", xs.Name, ml.Count);
+					ml.Add (new SampleMap (ikr, ivr, xs, sh));
 				}
 			}
 
-			ml.Sort ((m1, m2) => m1.LowRange - m2.LowRange);
+			ml.Sort ((m1, m2) => m1.KeyLowRange != m2.KeyLowRange ? m1.KeyLowRange - m2.KeyLowRange : m1.KeyHighRange - m2.KeyHighRange);
 
 			int prev = -1;
 			foreach (var m in ml) {
-				if (m.LowRange == prev)
+				if (m.KeyLowRange == prev)
 					continue; // skip ones with equivalent key to the previous one. Likely, right and left, or high volume vs. low volume.
-				prev = m.LowRange;
-				il.Add (m.LowRange);
-				xl.Add (m.XSample);
+				prev = m.KeyLowRange;
+				il.Add (m.KeyLowRange);
+				xl.Add (m.Sample);
 			}
 
 			xrni.SplitMap = new int [128];
 			int idx = -1;
 			for (int i = 0; i < 128; i++) {
-				// It is somewhat buggy, includes wrong values for low key area. But replacing it with "while" brings another bug. And using HighRange <= i also gives wrong value too.
-				if (idx + 1 < ml.Count && ml [idx + 1].LowRange >= i)
+				// It is somewhat buggy, includes wrong values for low key area. But replacing it with "while" brings another bug. And using KeyHighRange <= i also gives wrong value too.
+				if (idx + 1 < ml.Count && ml [idx + 1].KeyLowRange >= i)
 					idx++;
+//if (idx + 1 < ml.Count) Console.WriteLine (":::{0} {1} {2} {3}", ml.Count, idx, ml [idx + 1].KeyLowRange, i);
 				xrni.SplitMap [i] = idx;
 			}
 			xrni.Samples = xl.ToArray ();
 		}
 
-		struct SampleMap
+		class SampleMap
 		{
-			public SampleMap (ushort range, XSample sample)
+			public SampleMap (ushort keyRange, ushort velocityRange, XSample sample, SampleHeader sh)
 			{
-				Range = range;
-				XSample = sample;
+				KeyRange = keyRange;
+				VelocityRange = velocityRange;
+				Sample = sample;
+				SampleHeader = sh;
 			}
 
-			public ushort Range;
-			public XSample XSample;
+			public ushort KeyRange;
+			public ushort VelocityRange;
+			public XSample Sample;
+			public SSampleHeader SampleHeader;
 
-			public byte LowRange {
-				get { return (byte) (Range & 0xFF); }
+			public byte KeyLowRange {
+				get { return (byte) (KeyRange & 0xFF); }
 			}
-			public byte HighRange {
-				get { return (byte) ((Range & 0xFF00) >> 8); }
+			public byte KeyHighRange {
+				get { return (byte) ((KeyRange & 0xFF00) >> 8); }
+			}
+			public byte VelocityLowRange {
+				get { return (byte) (VelocityRange & 0xFF); }
+			}
+			public byte VelocityHighRange {
+				get { return (byte) ((VelocityRange & 0xFF00) >> 8); }
 			}
 		}
 
