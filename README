@@ -10,7 +10,8 @@ SoundFont sf2 file.
 	For mono, you'll need the latest build from trunk (I made a fix
 	which is only in trunk so far).
 
-	A directory is created to contain a set of XRNI files.
+	When you run the tool, a directory is created to contain a set of
+	XRNI files. e.g. for file "foo.sf2" it will create directory "foo".
 
 * Conversion Basics
 
@@ -19,6 +20,12 @@ SoundFont sf2 file.
 	A SF2 Preset contains more than one Instruments.
 	An Instrument contains more than one Zones, and each Zone contains
 	a SampleHeader, which is a set of information to retrieve raw sample.
+
+	BaseNote is set from OverridingRootKey, or OriginalPitch.
+	LoopMode is set from SampleModes.
+	LoopStart/LoopEnd are set from those in SampleHeader.
+
+	Resulting samples are sorted in KeyRange order and bound to SplitMap.
 
 * Dependencies
 
