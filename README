@@ -38,6 +38,10 @@ sf2xrni uses a couple of libraries:
 - ICSharpCode.SharpZipLib. It is just NRenoiseTools dependency
   http://www.icsharpcode.net/OpenSource/SharpZipLib/Default.aspx
 
-The prebuilt assemblies are in the repo.
+The prebuilt assemblies are in the repo. Note that I didn't copy NAudio.dll
+from NRenoiseTools release binaries since 0.1.3. It is because the NAudio
+version in NRenoiseTools misses some required bits used by sf2xrni. I have
+imported it from NAudio project itself.
+
 
 

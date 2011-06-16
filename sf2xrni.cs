@@ -8,9 +8,9 @@ using NAudio.SoundFont;
 using NAudio.Wave;
 
 using SInstrument = NAudio.SoundFont.Instrument;
-using XInstrument = NRenoiseTools.Instrument;
+using XInstrument = NRenoiseTools.RenoiseInstrument;
 using SSampleHeader = NAudio.SoundFont.SampleHeader;
-using XSample = NRenoiseTools.Sample;
+using XSample = NRenoiseTools.InstrumentSample;
 
 namespace Commons.Music.Sf2Xrni
 {
@@ -181,7 +181,8 @@ namespace Commons.Music.Sf2Xrni
 //if (idx + 1 < ml.Count) Console.WriteLine (":::{0} {1} {2} {3}", ml.Count, idx, ml [idx + 1].KeyLowRange, i);
 				xrni.SplitMap [i] = idx;
 			}
-			xrni.Samples = xl.ToArray ();
+			xrni.Samples = new RenoiseInstrumentSamples ();
+			xrni.Samples.Sample = xl.ToArray ();
 		}
 
 		class SampleMap
@@ -231,7 +232,7 @@ namespace Commons.Music.Sf2Xrni
 			xs.LoopStart = 2 * (sh.StartLoop - sh.Start);
 			xs.LoopEnd = 2 * (sh.EndLoop - sh.End);
 			int sampleModes = izone.SampleModes ();
-			xs.LoopMode = sampleModes == 0 ? SampleLoopMode.Off : SampleLoopMode.Forward;
+			xs.LoopMode = sampleModes == 0 ? InstrumentSampleLoopMode.Off : InstrumentSampleLoopMode.Forward;
 			xs.Name = String.Format ("Sample{0:D02} ({1})", count, sh.SampleName);
 			xs.BaseNote = (sbyte) izone.OverridingRootKey ();
 			if (xs.BaseNote == 0)
