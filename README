@@ -7,8 +7,7 @@ SoundFont sf2 file.
 
 	$ (mono) sf2xrni(.exe) sf2-files
 
-	For mono, you'll need the latest build from trunk (I made a fix
-	which is only in trunk so far).
+	For mono, you'll need mono 2.8 or later.
 
 	When you run the tool, a directory is created to contain a set of
 	XRNI files. e.g. for file "foo.sf2" it will create directory "foo".
