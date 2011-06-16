@@ -100,7 +100,12 @@ namespace Commons.Music.Sf2Xrni
 		protected override void OnXrniCreated (XInstrument xrni)
 		{
 			count++;
-			var path = Path.Combine (xrni_dir, count + "_" + xrni.Name) + ".xrni";
+			string name = xrni.Name;
+			foreach (char ch in Path.GetInvalidPathChars ())
+				name.Replace (ch, '_');
+			var path = Path.Combine (xrni_dir, count + "_" + name) + ".xrni";
+			if (name != xrni.Name)
+				Console.WriteLine ("Filename for {0} became {1}", xrni.Name, path);
 			using (var fs = new FileStream (path, FileMode.Create))
 				xrni.Save (fs);
 		}
