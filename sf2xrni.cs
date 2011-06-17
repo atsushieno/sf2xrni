@@ -101,11 +101,7 @@ namespace Commons.Music.Sf2Xrni
 		{
 			count++;
 			string name = xrni.Name;
-			foreach (char ch in Path.GetInvalidPathChars ())
-				name.Replace (ch, '_');
 			var path = Path.Combine (xrni_dir, count + "_" + name) + ".xrni";
-			if (name != xrni.Name)
-				Console.WriteLine ("Filename for {0} became {1}", xrni.Name, path);
 			using (var fs = new FileStream (path, FileMode.Create))
 				xrni.Save (fs);
 		}
@@ -121,7 +117,7 @@ namespace Commons.Music.Sf2Xrni
 					continue;
 				Console.WriteLine ("Processing " + preset.Name);
 				var xrni = new XInstrument ();
-				xrni.Name = preset.Name;
+				xrni.Name = NormalizePathName (preset.Name);
 				ImportSamples (sf2, preset, xrni);
 
 				OnXrniCreated (xrni);
@@ -160,7 +156,7 @@ namespace Commons.Music.Sf2Xrni
 
 					// FIXME: sample data must become monoral (panpot neutral)
 					var xs = ConvertSample (sampleCount++, sh, sf2.SampleData, izone);
-					xs.Name = sh.SampleName;
+					xs.Name = NormalizePathName (sh.SampleName);
 //Console.WriteLine ("Added {0} at {1}", xs.Name, ml.Count);
 					ml.Add (new SampleMap (ikr, ivr, xs, sh));
 				}
@@ -251,6 +247,14 @@ namespace Commons.Music.Sf2Xrni
 			xs.Buffer = ms.ToArray ();
 
 			return xs;
+		}
+
+		string NormalizePathName (string name)
+		{
+			foreach (char c in Path.GetInvalidPathChars ())
+				name = name.Replace (c, '_');
+			name = name.Replace (':', '_');
+			return name;
 		}
 	}
 }
