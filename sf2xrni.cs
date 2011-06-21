@@ -157,7 +157,6 @@ namespace Commons.Music.Sf2Xrni
 					// FIXME: sample data must become monoral (panpot neutral)
 					var xs = ConvertSample (sampleCount++, sh, sf2.SampleData, izone);
 					xs.Name = NormalizePathName (sh.SampleName);
-//Console.WriteLine ("Added {0} at {1}", xs.Name, ml.Count);
 					ml.Add (new SampleMap (ikr, ivr, xs, sh));
 				}
 			}
@@ -230,6 +229,7 @@ namespace Commons.Music.Sf2Xrni
 		{
 			// Indices in sf2 are numbers of samples, not byte length. So double them.
 			var xs = new XSample ();
+			xs.Extension = ".wav";
 			xs.LoopStart = 2 * (sh.StartLoop - sh.Start);
 			xs.LoopEnd = 2 * (sh.EndLoop - sh.End);
 			int sampleModes = izone.SampleModes ();
