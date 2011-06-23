@@ -173,14 +173,27 @@ namespace Commons.Music.Sf2Xrni
 			}
 
 			xrni.SplitMap = new int [128];
-			int idx = -1;
-			for (int i = 0; i < 128; i++) {
-				// It is somewhat buggy, includes wrong values for low key area. But replacing it with "while" brings another bug. And using KeyHighRange <= i also gives wrong value too.
-				if (idx + 1 < ml.Count && ml [idx + 1].KeyLowRange >= i)
-					idx++;
-//if (idx + 1 < ml.Count) Console.WriteLine (":::{0} {1} {2} {3}", ml.Count, idx, ml [idx + 1].KeyLowRange, i);
-				xrni.SplitMap [i] = idx;
+			prev = -1; // follow the previous code.
+			int lastValid = -1;
+			for (int i = 0; i < ml.Count; i++) {
+				var m = ml [i];
+				if (m.KeyLowRange == prev)
+					continue;
+				lastValid = i;
+				prev = m.KeyLowRange;
+
+				if (m.KeyHighRange <= 0) { // in case KeyHighRange is invalid...
+					for (int k = 0; k < 128; k++)
+						xrni.SplitMap [k] = i;
+				} else {
+					for (int k = m.KeyLowRange; k <= m.KeyHighRange; k++)
+						xrni.SplitMap [k] = i;
+				}
 			}
+			if (lastValid >= 0)
+				for (int i = ml [ml.Count - 1].KeyHighRange + 1; i < 128; i++)
+					xrni.SplitMap [i] = lastValid;
+
 			xrni.Samples = new RenoiseInstrumentSamples ();
 			xrni.Samples.Sample = xl.ToArray ();
 		}
