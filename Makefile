@@ -8,4 +8,4 @@ clean:
 
 dist:
 	rm -f sf2xrni-latest.zip
-	zip sf2xrni-latest.zip sf2xrni.exe sf2xrni.cs NAudio.dll NRenoiseTools.dll NRenoiseTools.XmlSerializers.dll ICSharpCode.SharpZipLib.dll README Makefile
+	zip sf2xrni-latest.zip sf2xrni.exe sf2xrni.cs NAudio.dll NRenoiseTools.dll ICSharpCode.SharpZipLib.dll README Makefile
