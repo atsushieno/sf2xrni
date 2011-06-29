@@ -136,11 +136,8 @@ namespace Commons.Music.Sf2Xrni
 					continue; // FIXME: is it possible?
 
 				var vr = pzone.VelocityRange ();
-				if (vr != 0 && ((vr & 0xFF00) >> 8) < 127)
-					continue; // use one with the highest velocity.
 
 				// an Instrument contains a set of zones that contain sample headers.
-//Console.WriteLine ("Instrument: " + i.Name);
 				int sampleCount = 0;
 				foreach (var izone in i.Zones) {
 					var ikr = izone.KeyRange ();
@@ -148,11 +145,6 @@ namespace Commons.Music.Sf2Xrni
 					var sh = izone.SampleHeader ();
 					if (sh == null)
 						continue; // FIXME: is it possible?
-					if (ml.FirstOrDefault (m => m.KeyRange == ikr && m.VelocityRange == ivr && m.SampleHeader == sh) != null)
-						continue; // There already is an overlapping one (not sure why such mapping is allowed, but there are such ones)
-
-					if (ivr != 0 && ((ivr & 0xFF00) >> 8) < 127)
-						continue; // use one with the highest velocity.
 
 					// FIXME: sample data must become monoral (panpot neutral)
 					var xs = ConvertSample (sampleCount++, sh, sf2.SampleData, izone);
@@ -161,38 +153,37 @@ namespace Commons.Music.Sf2Xrni
 				}
 			}
 
-			ml.Sort ((m1, m2) => m1.KeyLowRange != m2.KeyLowRange ? m1.KeyLowRange - m2.KeyLowRange : m1.KeyHighRange - m2.KeyHighRange);
+			ml.Sort ((m1, m2) =>
+				m1.KeyLowRange != m2.KeyLowRange ? m1.KeyLowRange - m2.KeyLowRange :
+				m1.KeyHighRange != m2.KeyHighRange ? m1.KeyHighRange - m2.KeyHighRange :
+				m1.VelocityLowRange != m2.VelocityLowRange ? m1.VelocityLowRange - m2.VelocityLowRange :
+				m1.VelocityHighRange - m2.VelocityHighRange);
 
 			int prev = -1;
 			foreach (var m in ml) {
-				if (m.KeyLowRange == prev)
-					continue; // skip ones with equivalent key to the previous one. Likely, right and left, or high volume vs. low volume.
 				prev = m.KeyLowRange;
 				il.Add (m.KeyLowRange);
 				xl.Add (m.Sample);
 			}
 
-			xrni.SplitMap = new int [128];
-			prev = -1; // follow the previous code.
-			int lastValid = -1;
+			xrni.SampleSplitMap = new SampleSplitMap ();
+			xrni.SampleSplitMap.NoteOnMappings = new SampleSplitMapNoteOnMappings ();
+			var nm = new SampleSplitMapping [ml.Count];
+			xrni.SampleSplitMap.NoteOnMappings.NoteOnMapping = nm;
 			for (int i = 0; i < ml.Count; i++) {
 				var m = ml [i];
-				if (m.KeyLowRange == prev)
-					continue;
-				lastValid = i;
-				prev = m.KeyLowRange;
-
-				if (m.KeyHighRange <= 0) { // in case KeyHighRange is invalid...
-					for (int k = 0; k < 128; k++)
-						xrni.SplitMap [k] = i;
-				} else {
-					for (int k = m.KeyLowRange; k <= m.KeyHighRange; k++)
-						xrni.SplitMap [k] = i;
+				var n = new SampleSplitMapping ();
+				n.BaseNote = m.Sample.BaseNote;
+				n.NoteStart = m.KeyLowRange;
+				n.NoteEnd = m.KeyHighRange <= 0 ? 128 : m.KeyHighRange;
+				n.SampleIndex = i;
+				if (m.VelocityHighRange > 0) {
+					n.MapVelocityToVolume = true;
+					n.VelocityStart = m.VelocityLowRange;
+					n.VelocityEnd = m.VelocityHighRange;
 				}
+				nm [i] = n;
 			}
-			if (lastValid >= 0)
-				for (int i = ml [ml.Count - 1].KeyHighRange + 1; i < 128; i++)
-					xrni.SplitMap [i] = lastValid;
 
 			xrni.Samples = new RenoiseInstrumentSamples ();
 			xrni.Samples.Sample = xl.ToArray ();
@@ -249,6 +240,7 @@ namespace Commons.Music.Sf2Xrni
 			xs.LoopMode = sampleModes == 0 ? InstrumentSampleLoopMode.Off : InstrumentSampleLoopMode.Forward;
 			xs.Name = String.Format ("Sample{0:D02} ({1})", count, sh.SampleName);
 			xs.BaseNote = (sbyte) izone.OverridingRootKey ();
+//			xs.Volume = (izone.VelocityRange () & 0xFF00 >> 8); // low range
 			if (xs.BaseNote == 0)
 				xs.BaseNote = (sbyte) sh.OriginalPitch;
 //Console.WriteLine ("{0} ({1}/{2}/{3}/{4}) {5}:{6}:{7}:{8}", xs.Name, sh.Start, sh.StartLoop, sh.EndLoop, sh.End, sh.SampleRate != 0xAC44 ? sh.SampleRate.ToString () : "", sh.OriginalPitch != 60 ? sh.OriginalPitch.ToString () : "", sh.PitchCorrection != 0 ? sh.PitchCorrection.ToString () : "", sampleModes);
