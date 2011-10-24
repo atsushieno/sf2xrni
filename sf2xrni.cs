@@ -63,8 +63,13 @@ namespace Commons.Music.Sf2Xrni
 
 	public class Driver
 	{
-		public static void Main (string [] args)
+		public static int Main (string [] args)
 		{
+			if (args.Length == 0) {
+				Console.WriteLine ("Usage: sf2xrni [sf2files...]");
+				return 1;
+			}
+
 			string filter = null;
 			var files = new List<string> ();
 			foreach (var arg in args) {
@@ -84,6 +89,7 @@ namespace Commons.Music.Sf2Xrni
 				var sf2xrni = new Sf2XrniStreamingConverter (path);
 				sf2xrni.Import (file, filter);
 			}
+			return 0;
 		}
 	}
 
