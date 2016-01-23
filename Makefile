@@ -1,7 +1,9 @@
 SOURCES=sf2xrni.cs
 
+CSC=csc # or build make CSC=mcs
+
 sf2xrni.exe : $(SOURCES)
-	csc -platform:x86 -r:NAudio.dll -r:NRenoiseTools.dll $(SOURCES) -debug
+	$(CSC) -platform:x86 -r:NAudio.dll -r:NRenoiseTools.dll $(SOURCES) -debug
 
 clean:
 	rm sf2xrni.exe

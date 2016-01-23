@@ -107,7 +107,7 @@ namespace Commons.Music.Sf2Xrni
 		{
 			count++;
 			string name = xrni.Name;
-			var path = Path.Combine (xrni_dir, count + "_" + name) + ".xrni";
+			var path = Path.Combine (xrni_dir, NormalizeFileName (count + "_" + name)) + ".xrni";
 			using (var fs = new FileStream (path, FileMode.Create))
 				xrni.Save (fs);
 		}
@@ -260,9 +260,19 @@ namespace Commons.Music.Sf2Xrni
 			return xs;
 		}
 
-		string NormalizePathName (string name)
+		internal static string NormalizePathName (string name)
 		{
-			foreach (char c in Path.GetInvalidPathChars ())
+			return Normalize (name, Path.GetInvalidPathChars ());
+		}
+
+		internal static string NormalizeFileName (string name)
+		{
+			return Normalize (name, Path.GetInvalidFileNameChars ());
+		}
+
+		static string Normalize (string name, char [] invalidChars)
+		{
+			foreach (char c in invalidChars)
 				name = name.Replace (c, '_');
 			name = name.Replace (':', '_');
 			return name;
