@@ -1,9 +1,9 @@
 SOURCES=sf2xrni.cs
 
-CSC=csc # or build make CSC=mcs
+CSC=csc # or CSC=mcs for old mono
 
 sf2xrni.exe : $(SOURCES)
-	$(CSC) -platform:x86 -r:NAudio.dll -r:NRenoiseTools.dll $(SOURCES) -debug
+	$(CSC) -platform:x86 -r:NAudio.dll -r:NRenoiseTools.dll $(SOURCES) -debug:portable
 
 clean:
 	rm sf2xrni.exe
