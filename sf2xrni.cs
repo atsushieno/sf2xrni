@@ -240,8 +240,8 @@ namespace Commons.Music.Sf2Xrni
 			// Indices in sf2 are numbers of samples, not byte length. So double them.
 			var xs = new XSample ();
 			xs.Extension = ".wav";
-			xs.LoopStart = 2 * (sh.StartLoop - sh.Start);
-			xs.LoopEnd = 2 * (sh.EndLoop - sh.End);
+			xs.LoopStart = sh.StartLoop - sh.Start;
+			xs.LoopEnd = sh.EndLoop - sh.Start;
 			int sampleModes = izone.SampleModes ();
 			xs.LoopMode = sampleModes == 0 ? InstrumentSampleLoopMode.Off : InstrumentSampleLoopMode.Forward;
 			xs.Name = String.Format ("Sample{0:D02} ({1})", count, sh.SampleName);
